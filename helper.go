@@ -3,6 +3,7 @@ package RBTree
 import (
 	"container/list"
 	"fmt"
+	"math"
 )
 
 var (
@@ -11,44 +12,103 @@ var (
 	arrow = `|`
 )
 
-func PrintTree(root *Node) {
+/*
+Print tree in a terminal. Very helpful for testing
+*/
+func (t *RBTree) PrintTree() {
+	h := getHeight(t.root, 0)
+	copyNode := &Node{Key: t.root.Key, isBlack: t.root.isBlack}
+	copyTree(t.root, copyNode, 1, h, false)
+	tabs := calcTabs(h)
+	printTree(copyNode, tabs)
+}
 
-	res := printTree(root)
-
-	for _, nodes := range res {
-		for _, node := range nodes {
-			fmt.Print(node.value.String())
+func printTree(root *Node, tabs []string) {
+	l := list.New()
+	l.PushBack(root)
+	level := 0
+	indLevel := 0
+	for l.Len() != 0 {
+		el := l.Front()
+		n := el.Value.(*Node)
+		l.Remove(el)
+		if n.Key != nil {
+			if n.isBlack {
+				fmt.Print(tabs[indLevel] + n.Key.String())
+			} else {
+				fmt.Print(tabs[indLevel] + red + n.Key.String() + reset)
+			}
+		} else {
+			fmt.Print(tabs[indLevel] + "  ")
 		}
-		fmt.Println()
+		if n.left != nil {
+			l.PushBack(n.left)
+		}
+		if n.right != nil {
+			l.PushBack(n.right)
+		}
+		level++
+		if level == int(math.Pow(2, float64(indLevel))) {
+			fmt.Println()
+			level = 0
+			indLevel++
+		}
 	}
 }
 
-func printTree(root *Node) [][]*Node {
-	nodesOnLevels := make([][]*Node, 0)
-	nodes := make([]*Node, 0)
-
-	l := list.New()
-	l.PushBack(root)
-	for l.Len() != 0 {
-		el := l.Front()
-		l.Remove(el)
-
-		if len(nodes) != 0 && (el.Value.(*Node) == nodes[0].left || el.Value.(*Node) == nodes[0].right) {
-			nodesOnLevels = append(nodesOnLevels, nodes)
-			nodes = make([]*Node, 0)
+func calcTabs(height int) (res []string) {
+	tab := " "
+	tmpTab := ""
+	for i := height; i > 0; i-- {
+		for j := 0; j < int(math.Pow(2, float64(i)))/2+2; j++ {
+			tmpTab += tab
 		}
-
-		if el.Value.(*Node).left != nil {
-			l.PushBack(el.Value.(*Node).left)
-		}
-		if el.Value.(*Node).right != nil {
-			l.PushBack(el.Value.(*Node).right)
-		}
-
-		nodes = append(nodes, el.Value.(*Node))
+		res = append(res, tmpTab)
+		tmpTab = ""
 	}
-	if len(nodes) != 0 {
-		nodesOnLevels = append(nodesOnLevels, nodes)
+	return res
+}
+
+func getHeight(node *Node, height int) int {
+	if node == nil {
+		return height
 	}
-	return nodesOnLevels
+	heightLeft := getHeight(node.left, height+1)
+	heightRight := getHeight(node.right, height+1)
+	if heightLeft < heightRight {
+		return heightRight
+	}
+	return heightLeft
+}
+
+func copyTree(inN, prevOutN *Node, curH, h int, isLeft bool) {
+	if curH == h+1 {
+		return
+	}
+	if curH != 1 {
+		var nNode *Node
+		if inN == nil {
+			nNode = &Node{Key: nil}
+		} else {
+			nNode = &Node{Key: inN.Key, isBlack: inN.isBlack}
+		}
+		if isLeft {
+			prevOutN.left = nNode
+		} else {
+			prevOutN.right = nNode
+		}
+		if inN != nil {
+			copyTree(inN.left, nNode, curH+1, h, true)
+		} else {
+			copyTree(nil, nNode, curH+1, h, true)
+		}
+		if inN != nil {
+			copyTree(inN.right, nNode, curH+1, h, false)
+		} else {
+			copyTree(nil, nNode, curH+1, h, false)
+		}
+	} else {
+		copyTree(inN.left, prevOutN, curH+1, h, true)
+		copyTree(inN.right, prevOutN, curH+1, h, false)
+	}
 }
